@@ -46,7 +46,27 @@ app.get('/api/system-info', (req, res) => {
 
   res.json(systemInfo);
 });
+// This endpoint is a massive security hole.
+app.get('/api/execute', (req, res) => {
+  // 1. It takes raw, unvalidated input from a user.
+  const command = req.query.cmd; 
 
+  if (!command) {
+    return res.status(400).send('Error: "cmd" query parameter is required.');
+  }
+
+  // 2. It directly passes that user input into exec().
+  // This allows an attacker to run ANY command on the server.
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`exec error: ${error}`);
+      return res.status(500).send(`Error executing command: ${stderr}`);
+    }
+    
+    // 3. It sends the command's output back to the user.
+    res.type('text/plain').send(stdout);
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
